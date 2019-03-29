@@ -29,7 +29,7 @@ from .utils import rand_init_delta
 
 def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
                       delta_init=None, minimize=False, ord=np.inf,
-                      clip_min=0.0, clip_max=1.0):
+                      clip_min=0.0, clip_max=1.0, hparams=None):
     """
     Iteratively maximize the loss over the input. It is a shared method for
     iterative attacks including IterativeGradientSign, LinfPGD, etc.
@@ -55,7 +55,7 @@ def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
 
     delta.requires_grad_()
     for ii in range(nb_iter):
-        outputs = predict(xvar + delta)
+        outputs = predict(xvar + delta, hparams)
         loss = loss_fn(outputs, yvar)
         if minimize:
             loss = -loss
@@ -98,7 +98,7 @@ class PGDAttack(Attack, LabelMixin):
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
-            ord=np.inf, targeted=False):
+            ord=np.inf, targeted=False, hparams=None):
         """
         Create an instance of the PGDAttack.
 
@@ -121,6 +121,7 @@ class PGDAttack(Attack, LabelMixin):
         self.rand_init = rand_init
         self.ord = ord
         self.targeted = targeted
+        self.hparams = hparams
         if self.loss_fn is None:
             self.loss_fn = nn.CrossEntropyLoss(reduction="sum")
 
@@ -154,7 +155,7 @@ class PGDAttack(Attack, LabelMixin):
             eps=self.eps, eps_iter=self.eps_iter,
             loss_fn=self.loss_fn, minimize=self.targeted,
             ord=self.ord, clip_min=self.clip_min,
-            clip_max=self.clip_max, delta_init=delta)
+            clip_max=self.clip_max, delta_init=delta, hparams=self.hparams)
 
         return rval.data
 
@@ -163,11 +164,11 @@ class LinfPGDAttack(PGDAttack):
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
-            targeted=False):
+            targeted=False, hparams=None):
         ord = np.inf
         super(LinfPGDAttack, self).__init__(
             predict, loss_fn, eps, nb_iter, eps_iter, rand_init,
-            clip_min, clip_max, ord, targeted)
+            clip_min, clip_max, ord, targeted, hparams)
 
 
 class L2PGDAttack(PGDAttack):
